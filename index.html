@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang=en>
+  <head>
+  <meta charset="utf-8">
+  <meta name="robots" content="index,follow">
+  <title>Inteface to Humdrum Notation Plugin </title>
+</head>
+<body>
+<h2>Interface to Humdrum Notation Plugin (Hnp)</h2>
+<h3> Introduction</h3>
+<p>
+Documentation to this plugin can be found
+<a href="https://plugin.humdrum.org/">https://plugin.humdrum.org/</a>.
+As described in the document, the Humdrum Notation Plugin creates
+ music notation for web pages from Humdrum digital scores,
+ either embedded within the same page or from an external source.
+This project contains the tcl/tk code which interfaces to the
+plugin. The user selects a kern file and presses the render button.
+The software produces a web page with the kern file embedded and
+exports this page to your browser. The web page downloads
+the JavaScript from an external site, which converts the kern file
+to Scaleable Vector Graphics which displays the music score.
+
+<p>
+
+This application provides a convenient way of displaying kern
+files on your browser and experimenting with the various options
+described in the documentation.
+
+<p>
+
+To run this software, you require Tcl/Tk the interpreter, either 8.5 or 8.6.
+This frequently comes with the Linux or OS operating system or can
+be easily installed. Details on acquiring this interpreter can be
+found on <a href="https://www.tcl.tk/software/tcltk/download.html">
+https://www.tcl.tk/software/tcltk/download.html</a> if it is missing
+from your system.
+
+<p>
+It is suggested that you run this script in its own folder as
+the program will created an initialization file, hnpui.ini containing
+various configuration options. In addition, the program will create
+a temporary html file which will be sent to your browser. 
+
+<p>
+To start this script in a terminal or command window, enter
+<pre>
+wish hnpui.tcl
+</pre>
+or double click on the hnpui.tcl file icon.
+
+<p>
+The rest of this document describes how to run this
+application.
+
+<h3> Main Window </h3>
+<p>
+This is the main window containing 5 buttons and a listbox containing
+the file names of all the kern files is a user chosen directory.
+<p>
+<img SRC = "main.gif" ALT="main window" >
+<p>
+If you hover the mouse pointer on any of the buttons, a tooltip
+will pop up with an explanation of the buttons function. Clicking
+on any the buttons will cause another window to pop up. By default
+the new window is placed in the center of the screen and may obscure
+the main window. You should move the window to a new location
+and the program will remember this location for the next time you run
+this program.
+<p>
+You select the folder containing the kern files by clicking on the
+<b>open</b> button.
+
+<h3>cfg</h3>
+<p>
+Before using this script, it is recommended that you open the cfg
+window which looks like this.
+<p>
+<img SRC = "cfg.gif" ALT="cfg window" >
+<p>
+The program requires an internet browser like Firefox in order
+to display the kern file in common music notation. The Firefox
+browser comes with most Linux distributions, so it is sufficient
+to enter firefox in the entry box. For Windows 10, it will be
+necessary to indicate the full path to the browser executable --
+for example.
+<pre>
+"C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"
+</pre>
+or
+<pre>
+"C:/Program Files (x86)/Google/Chrome/Application/chrome.exe"
+</pre>
+<p>
+Note that even though the Windows file system uses back slashes
+to indicate the file path, this program requires that you use
+forward slashes. Tcl interprets the back slash character as
+something else.
+<p>
+You can use the button labeled <b>find or enter browser</b> to 
+navigate to the binary of this browser. Similarly, the browser
+will require the full path to the temporary file (tune.html).
+You only need to do this once since this information will be
+stored in the text file hnpui.ini. 
+
+<h3>Open</h3>
+<p>
+Clicking this button opens a file folder browser for selecting
+the folder containing your kern files. Note that once you open
+this folder, it will appear empty unless it contains other
+subfolders.
+
+<h3> View </h3>
+<p>
+Clicking on the <b>view</b> button will pop up two windows
+similar to below. The header and tail of the selected kern file
+is shown in one window and the spines are displayed in separate
+listboxes in the other window. Presently, all you can do is
+to scroll down the window or close it when you are done. If the
+kern file contains spines which split into other spines, the
+contents will not line up correctly. More work is needed.
+<p>
+<img SRC = "headr.gif" ALT="header window" >
+<p>
+<img SRC = "edit.gif" ALT="edit window" >
+
+<h3> Options </h3>
+<p>
+The Hnp script allows you to control the appearance of the
+rendered music using various options below.
+<p>
+<img SRC = "options.gif" ALT="options window" >
+<p>
+Hovering the mouse pointer on the labels associated
+with any of these options will pop up a tooltip giving
+the default value and the allowable values for these
+options. If an entry box is blank, then the option and
+value will not be inserted into the web page and Hnp
+will substitute the default value.
+
+<h3>Render</h3>
+Clicking this file will create a temporary html file
+which contains the selected kern file and the specified
+options. The internet browser that you specified in the
+cfg window will attempt to open this file. Allow around
+30 seconds for the JavaScript to render the kern file
+into common music notation. For example, here is a
+truncated portion of this browser.
+<p>
+<img SRC = "render.gif" ALT="browser window" >
+<p>
+
+
+</p>
+<hr width="75%">
+<center>This page was last updated on March 18 2021.
+</center>
+</body>
+</html>
