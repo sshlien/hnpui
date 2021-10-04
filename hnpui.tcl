@@ -146,13 +146,13 @@ seconds to typeset the music."
 set w .collection
 frame .collection
 label .collection.folder -text $kernstate(infolder) -width 40
-listbox .collection.list -height 10 -width 40 -bg lightyellow\
+listbox .collection.list -height 15 -width 60 -bg lightyellow\
     -yscrollcommand {.collection.ysbar set} -selectmode single 
 scrollbar .collection.ysbar -orient vertical -command {.collection.list yview}
 pack $w.folder
-pack $w.list -side left 
+pack $w.list -side left  -fill y
 pack $w.ysbar -side right   -fill y -in $w
-pack $w -expand 1 -fill x
+pack $w -expand 1 -fill both
 
 proc select_folder {} {
 global kernstate
