@@ -30,7 +30,8 @@ source tooltip.tcl
 # load_kern_file
 # copy_kern_to_html
 # export_to_browser
-# make_editor
+# edit_kern_src
+# spine_viewer
 # BindYview (lists args)
 # get_header (file)
 # verovio_options
@@ -60,6 +61,11 @@ global kernstate
    set kernstate(autoresize) 0
    set kernstate(header) 0
    set kernstate(incipit) 0
+   set kernstate(font_family) [font actual helvetica -family]
+   set kernstate(font_family_toc) courier
+   set kernstate(font_size) 11
+   set kernstate(texteditor) gvim
+
 }
 
 init_kernstate
@@ -120,23 +126,27 @@ proc read_hnpgui_ini {hnpguipath} {
 
 
 read_hnpgui_ini $hnpguipath 
+set df [font create -family $kernstate(font_family) -size $kernstate(font_size)]
 
 set w .header
 frame $w
-button $w.render -text render -command {copy_kern_to_html; 
+button $w.render -text render -font $df -command {copy_kern_to_html; 
    export_to_browser}
-button $w.edit -text view -command make_editor
-button $w.options -text options -command verovio_options
-button $w.open -text open -command select_folder
-button $w.cfg -text cfg -command cfg_settings
+menubutton $w.kern -text kern -menu $w.kern.type -font $df
+menu $w.kern.type -tearoff 0
+$w.kern.type add command -label spineList  -command spine_viewer -font $df
+$w.kern.type add command -label kernFile  -command edit_kern_src -font $df
+button $w.options -text options -command verovio_options -font $df
+button $w.open -text open -command select_folder -font $df
+button $w.cfg -text cfg -command cfg_settings -font $df
 
-pack $w.open $w.cfg $w.edit $w.options $w.render -side left
+pack $w.open $w.cfg $w.kern $w.options $w.render -side left
 
 pack $w
 
 tooltip::tooltip .header.open  "Selects kern folder to open"
 tooltip::tooltip .header.cfg "Select browser and temporary html file to use"
-tooltip::tooltip .header.edit "Views selected kern file.\nEditor not implemented yet."
+tooltip::tooltip .header.kern "Views selected kern file.\nEditor not implemented yet."
 tooltip::tooltip .header.options "Specify page dimensions, scale factor
  and other options used by jnp."
 tooltip::tooltip .header.render "Creates html with kern file embedded
@@ -163,17 +173,33 @@ load_collection
 }
 
 proc cfg_settings {} {
+global df
 set w .cfg
 if {[winfo exist .cfg]} {return}
 toplevel .cfg
 position_window ".cfg"
-button $w.browserbut -text "find or enter browser"  -command pick_browser
-entry $w.browserent -width 50 -textvariable kernstate(browser) 
-button $w.tempfilebut -text "find or enter temp html file" -command pick_tempfile
-entry $w.tempfilent -width 50 -textvariable kernstate(tempfile)
-grid $w.browserbut $w.browserent
-grid $w.tempfilebut $w.tempfilent
+button $w.findeditor -text "find text editor" -font $df -command {setpath texteditor} -width 20
+entry $w.editor -textvariable kernstate(texteditor) -width 50 -font $df
+grid $w.findeditor $w.editor
+
+button $w.browserbut -text "find or enter browser"  -command pick_browser -font $df -width 20
+entry $w.browserent -width 50 -textvariable kernstate(browser)  -font $df
+button $w.tempfilebut -text "find or enter temp html file" -command pick_tempfile -font $df -width 20
+entry $w.tempfilent -width 50 -textvariable kernstate(tempfile) -font $df
+grid $w.browserbut $w.browserent -sticky w
+grid $w.tempfilebut $w.tempfilent -sticky w
 }
+
+proc setpath {path_var} {
+    global kernstate
+    set filedir [file dirname $kernstate($path_var)]
+    set openfile [tk_getOpenFile -initialdir $filedir]
+    if {[string length $openfile] > 0} {
+        set kernstate($path_var) $openfile
+        update
+    }
+}
+
 
 proc pick_browser {} {
 global kernstate
@@ -269,7 +295,15 @@ proc export_to_browser {} {
     }
 
 
-proc make_editor {} {
+proc edit_kern_src {} {
+   global kernstate
+   set infile [selected_tune]
+   set cmd "exec [list $kernstate(texteditor)] [list $infile] &"
+   catch {eval $cmd} exec_out
+}
+
+
+proc spine_viewer {} {
 set infile [selected_tune]
 set nboxes [get_header $infile]
 set w .edit
@@ -278,7 +312,7 @@ toplevel .edit
 position_window ".edit"
 set listboxes {}
 for {set i 0} {$i < $nboxes} {incr i} {
-   listbox $w.list$i -height 10 -width 10 -yscrollcommand {.edit.ysbar set}
+   listbox $w.list$i -height 20 -width 10 -yscrollcommand {.edit.ysbar set}
    pack $w.list$i -side left
    lappend listboxes $w.list$i
    }
@@ -286,19 +320,23 @@ scrollbar .edit.ysbar -orient vertical -command [list BindYview $listboxes]
 pack .edit.ysbar -side right   -fill y -in $w
 
 set kerndata [load_kern_file $infile]
-foreach line [split $kerndata '\n'] {
-  set spines [split $line '\t']
+foreach line [split $kerndata \n] {
+  if {[string first "!" $line] == 0} continue
+  set spines [split $line \t]
   set nspines [llength $spines]
-  if {$nspines > 0} {
-    for {set i 0} {$i < $nspines} {incr i} {
+  for {set i 0} {$i < $nboxes} {incr i} {
+      if {$i <$nspines} {
       set elem [lindex $spines $i]
-      if {$i < $nboxes && [string first "!!!" $elem] != 0} {
+      } else {set elem . }
+      if {$i < $nboxes && [string first "!" $elem] != 0} {
            $w.list$i insert end $elem
-             } 
+             }
       }
     }
-  }
 }
+
+
+
 
 proc BindYview {lists args} {
   #puts "lists = $lists args = $args"
@@ -332,55 +370,56 @@ return $maxspines
 }
 
 proc verovio_options {} {
+global df
 global kernstate
 if {![info exist .voptions]} {
   set w .voptions
   if {[winfo exist $]} {return}
   toplevel $w
   position_window ".voptions"
-  label $w.pwidth -text "Page width"
+  label $w.pwidth -text "Page width" -font $df
   tooltip::tooltip .voptions.pwidth "minimum 100, maximum 60000"  
-  entry $w.pwidthe -textvariable kernstate(pwidth)
-  label $w.mbot -text "Bottom margin"
+  entry $w.pwidthe -textvariable kernstate(pwidth) -font $df
+  label $w.mbot -text "Bottom margin" -font $df
   tooltip::tooltip .voptions.mbot "default 50, minimum 0, maximum 500"
-  entry $w.mbote -textvariable kernstate(mbot)
-  label $w.mleft -text "Left margin"
+  entry $w.mbote -textvariable kernstate(mbot) -font $df
+  label $w.mleft -text "Left margin" -font $df
   tooltip::tooltip .voptions.mleft "default 50, minimum 0, maximum 500"
-  entry $w.mlefte -textvariable kernstate(mleft)
-  label $w.mright -text "Right margin"
+  entry $w.mlefte -textvariable kernstate(mleft) -font $df
+  label $w.mright -text "Right margin" -font $df
   tooltip::tooltip .voptions.mright "default 50, minimum 0, maximum 500"
-  entry $w.mrighte -textvariable kernstate(mright)
-  label $w.mtop -text "Top margin"
+  entry $w.mrighte -textvariable kernstate(mright) -font $df
+  label $w.mtop -text "Top margin" -font $df
   tooltip::tooltip .voptions.mtop "default 50, minimum 0, maximum 500"
-  entry $w.mtope -textvariable kernstate(mtop) 
-  label $w.sca -text "Scale"
+  entry $w.mtope -textvariable kernstate(mtop)  -font $df
+  label $w.sca -text "Scale" -font $df
   tooltip::tooltip .voptions.sca "scale factor as a percentage\
 default 40, minimum 1"
-  entry $w.scae -textvariable kernstate(sca)
-  label $w.spstaff -text "Staff spacing"
+  entry $w.scae -textvariable kernstate(sca) -font $df
+  label $w.spstaff -text "Staff spacing" -font $df
   tooltip::tooltip .voptions.spstaff "default 8, minimum 0, maximum 24"
-  entry $w.spstaffe -textvariable kernstate(spstaff)
-  label $w.splin -text "Linear spacing"
+  entry $w.spstaffe -textvariable kernstate(spstaff) -font $df
+  label $w.splin -text "Linear spacing" -font $df
   tooltip::tooltip .voptions.splin "default 0.25, minimum 0.0, maximum 1.0"
-  entry $w.spline -textvariable kernstate(splin) 
-  label $w.spnlin -text "Nonlinear spacing"
+  entry $w.spline -textvariable kernstate(splin)  -font $df
+  label $w.spnlin -text "Nonlinear spacing" -font $df
   tooltip::tooltip .voptions.spnlin "default 0.6, minimum 0.0, maximum 1.0"
-  entry $w.spnline -textvariable kernstate(spnline)
+  entry $w.spnline -textvariable kernstate(spnline) -font $df
   checkbutton $w.autoresize -variable kernstate(autoresize)\
-      -text "auto resize" -onvalue true -offvalue false
+      -text "auto resize" -onvalue true -offvalue false -font $df
   tooltip::tooltip .voptions.autoresize "re-typeset music when browser window is resized"
   checkbutton $w.header -variable kernstate(header) -text header\
-      -onvalue true -offvalue false
+      -onvalue true -offvalue false -font $df
   tooltip::tooltip .voptions.header "include title, composer and other info"
   checkbutton $w.incipit -variable kernstate(incipit)\
-      -text incipit -onvalue true -offvalue false
+      -text incipit -onvalue true -offvalue false -font $df
   tooltip::tooltip .voptions.incipit "display only first system of music score" 
-  grid $w.pwidth $w.pwidthe $w.sca $w.scae
-  grid $w.mbot $w.mbote $w.mtop $w.mtope
-  grid $w.mleft $w.mlefte $w.mright $w.mrighte
-  grid $w.spstaff $w.spstaffe 
-  grid $w.splin $w.spline $w.spnlin $w.spnline
-  grid $w.autoresize $w.header $w.incipit
+  grid $w.pwidth $w.pwidthe $w.sca $w.scae -sticky w
+  grid $w.mbot $w.mbote $w.mtop $w.mtope -sticky w
+  grid $w.mleft $w.mlefte $w.mright $w.mrighte -sticky w
+  grid $w.spstaff $w.spstaffe  -sticky w
+  grid $w.splin $w.spline $w.spnlin $w.spnline -sticky w
+  grid $w.autoresize $w.header $w.incipit -sticky w
   }
 }
 
