@@ -1,15 +1,17 @@
 
-#package provide app-hnpgui 1.0
+#package provide app-hnpui 1.0
 #!/bin/sh
 # the next line restarts using wish \
 exec wish "$0" "$@"
 
-set hnpguipath [pwd]
+wm title . "hnpui 1.01 2021.10.29"
+
+set hnpuipath [pwd]
 #puts $kernfiles
 
 wm protocol . WM_DELETE_WINDOW {
     get_geometry_of_all_toplevels
-    write_hnpgui_ini 
+    write_hnpui_ini 
     exit
     }
 
@@ -19,8 +21,8 @@ source tooltip.tcl
 # init_kernstate
 # position_window (window)
 # get_geometry_of_all_toplevels
-# write_hnpgui_ini
-# read_hnpgui_ini
+# write_hnpui_ini
+# read_hnpui_ini
 #  .header buttons interface
 # select_folder
 # cfg_settings
@@ -31,6 +33,7 @@ source tooltip.tcl
 # copy_kern_to_html
 # export_to_browser
 # edit_kern_src
+# edit_error
 # spine_viewer
 # BindYview (lists args)
 # get_header (file)
@@ -89,10 +92,10 @@ proc get_geometry_of_all_toplevels {} {
    }
 }
 
-proc write_hnpgui_ini {} {
+proc write_hnpui_ini {} {
     global kernstate
-    global hnpguipath
-    set outfile [file join $hnpguipath hnpgui.ini]
+    global hnpuipath
+    set outfile [file join $hnpuipath hnpui.ini]
     set handle [open $outfile w]
     #tk_messageBox -message "writing $outfile"  -type ok
     foreach item [lsort [array names kernstate]] {
@@ -101,9 +104,9 @@ proc write_hnpgui_ini {} {
     close $handle
 }
 
-proc read_hnpgui_ini {hnpguipath} {
+proc read_hnpui_ini {hnpuipath} {
     global kernstate 
-    set infile [file join $hnpguipath hnpgui.ini]
+    set infile [file join $hnpuipath hnpui.ini]
     if {![file exist $infile]} return
     set handle [open $infile r]
     #tk_messageBox -message "reading $infile"  -type ok
@@ -125,7 +128,7 @@ proc read_hnpgui_ini {hnpguipath} {
 }
 
 
-read_hnpgui_ini $hnpguipath 
+read_hnpui_ini $hnpuipath 
 set df [font create -family $kernstate(font_family) -size $kernstate(font_size)]
 
 set w .header
@@ -155,7 +158,7 @@ seconds to typeset the music."
 
 set w .collection
 frame .collection
-label .collection.folder -text $kernstate(infolder) -width 40
+label .collection.folder -text $kernstate(infolder) -width 55
 listbox .collection.list -height 15 -width 60 -bg lightyellow\
     -yscrollcommand {.collection.ysbar set} -selectmode single 
 scrollbar .collection.ysbar -orient vertical -command {.collection.list yview}
@@ -222,12 +225,20 @@ proc load_collection {} {
   global kernstate
   set w .collection
   $w.list delete 0 end
-  set hnpguipath [pwd]
+  set hnpuipath [pwd]
   set infolder $kernstate(infolder)
   if {![file exist $infolder]} return
   cd $infolder
-  set kernfiles [glob *.krn]
-  cd $hnpguipath
+  set kernfiles [glob -nocomplain *.krn]
+  set nkerns [llength $kernfiles]
+  if {$nkerns < 1} {
+    set msg "No kern files were found. Click the open button\
+ and click on the folder which contains all the kern files. Note\
+ that only subfolders will be visible in the directory widget."
+    tk_messageBox -message $msg
+    return
+    }
+  cd $hnpuipath
   set kernfiles [lsort $kernfiles]
   foreach kern $kernfiles {
     $w.list insert end $kern
@@ -291,8 +302,18 @@ proc copy_kern_to_html {} {
 proc export_to_browser {} {
     global kernstate
     #puts "$kernstate(browser) file://$kernstate(tempfile)"
-    exec $kernstate(browser) file://$kernstate(tempfile) &
-    }
+    set cmd "exec [list $kernstate(browser)] file://$kernstate(tempfile) &"
+    catch {eval $cmd} exec_out
+    if {[string first "no such" $exec_out] >= 0} {
+     browser_error $kernstate(browser)
+     }
+}
+
+proc browser_error {src} {
+set msg "hnpui could not find the internet browser executable $src.\
+ You need to click the cfg button and indicate the path to the browser."
+tk_messageBox -message $msg
+}
 
 
 proc edit_kern_src {} {
@@ -300,6 +321,15 @@ proc edit_kern_src {} {
    set infile [selected_tune]
    set cmd "exec [list $kernstate(texteditor)] [list $infile] &"
    catch {eval $cmd} exec_out
+   if {[string first "no such" $exec_out] >= 0} {
+     edit_error $kernstate(texteditor)
+     }
+}
+
+proc edit_error {src} {
+set msg "hnpui could not find the executable $src. You need to click \
+the cfg button and indicate the path to the text editor."
+tk_messageBox -message $msg
 }
 
 
